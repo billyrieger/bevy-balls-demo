@@ -5,33 +5,68 @@ use bevy::{
 };
 use bevy_rapier2d::prelude::*;
 
-struct Ball(u32);
+pub struct Ball;
 
-#[derive(Bundle)]
-struct BallBundle {
-    ball: Ball,
-    #[bundle]
-    sprite: SpriteBundle,
-    #[bundle]
-    rigid_body: RigidBodyBundle,
-    #[bundle]
-    collider: ColliderBundle,
-    position_sync: RigidBodyPositionSync,
+pub struct SpawnBallEvent {
+    pub position: Vec2,
+    pub radius: f32,
+}
+
+pub struct BallPlugin;
+
+impl Plugin for BallPlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.add_event::<SpawnBallEvent>()
+            .add_system(ball_spawner.system());
+    }
+}
+
+fn ball_spawner(
+    mut commands: Commands,
+    assets_server: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut events: EventReader<SpawnBallEvent>,
+) {
+    for ev in events.iter() {
+        commands
+            .spawn()
+            .insert(Ball)
+            .insert_bundle(SpriteBundle {
+                sprite: Sprite::new(Vec2::new(2.0 * ev.radius * SCALE, 2.0 * ev.radius * SCALE)),
+                mesh: meshes.add(create_mesh(100)),
+                material: materials.add(assets_server.load("goat.png").into()),
+                ..Default::default()
+            })
+            .insert_bundle(RigidBodyBundle {
+                position: ev.position.into(),
+                ..Default::default()
+            })
+            .insert_bundle(ColliderBundle {
+                shape: ColliderShape::ball(ev.radius),
+                material: ColliderMaterial {
+                    restitution: 0.9,
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .insert(RigidBodyPositionSync::Discrete);
+    }
 }
 
 fn create_mesh(n: u32) -> Mesh {
+    let zhat = [0.0, 0.0, 1.0];
     let mut vertex_positions = vec![[0.0, 0.0, 0.0]];
-    let mut vertex_normals = vec![[0.0, 0.0, 1.0]];
+    let mut vertex_normals = vec![zhat];
     let mut vertex_uv_0s = vec![[0.5, 0.5]];
     let mut triangle_indices = vec![];
-    for i in 0..n {
+    for i in 1..=n {
         let theta = (i as f32) * std::f32::consts::TAU / (n as f32);
-        let x = theta.cos();
-        let y = theta.sin();
-        vertex_positions.push([x, y, 0.0]);
-        vertex_normals.push([0.0, 0.0, 1.0]);
-        vertex_uv_0s.push([(x + 1.0) / 2.0, 1.0 - (y + 1.0) / 2.0]);
-        triangle_indices.extend([0, i + 1, (i + 1) % n + 1]);
+        let (x, y) = (theta.cos(), theta.sin());
+        vertex_positions.push([0.5 * x, 0.5 * y, 0.0]);
+        vertex_normals.push(zhat);
+        vertex_uv_0s.push([0.5 * (x + 1.0), 1.0 - 0.5 * (y + 1.0)]);
+        triangle_indices.extend([0, i, i % n + 1]);
     }
 
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
@@ -41,35 +76,4 @@ fn create_mesh(n: u32) -> Mesh {
     mesh.set_indices(Some(Indices::U32(triangle_indices)));
 
     mesh
-}
-
-pub fn spawn_ball(
-    commands: &mut Commands,
-    assets_server: &Res<AssetServer>,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
-    radius: f32,
-) {
-    commands.spawn_bundle(BallBundle {
-        ball: Ball(0),
-        sprite: SpriteBundle {
-            sprite: Sprite::new(Vec2::new(radius * SCALE, radius * SCALE)),
-            mesh: meshes.add(create_mesh(100)),
-            material: materials.add(assets_server.load("goat.png").into()),
-            ..Default::default()
-        },
-        rigid_body: RigidBodyBundle {
-            position: Vec2::new(0.0, 10.0).into(),
-            ..Default::default()
-        },
-        collider: ColliderBundle {
-            shape: ColliderShape::ball(radius),
-            material: ColliderMaterial {
-                restitution: 0.7,
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        position_sync: RigidBodyPositionSync::Discrete,
-    });
 }
