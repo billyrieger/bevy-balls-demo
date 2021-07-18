@@ -23,8 +23,8 @@ impl Plugin for BallPlugin {
         app.insert_resource(Asleep(false))
             .insert_resource(StartAsleepCheck(Timer::from_seconds(3.0, false)))
             .add_event::<SpawnBallEvent>()
-            .add_system(ball_spawner.system().label("ball_spawner"))
-            .add_system(check_sleeping.system().after("ball_spawner"));
+            .add_system(ball_spawner.system().label("ball_spawner"));
+            // .add_system(check_sleeping.system().after("ball_spawner"));
     }
 }
 
@@ -41,12 +41,16 @@ fn ball_spawner(
             .insert(Ball)
             .insert_bundle(SpriteBundle {
                 sprite: Sprite::new(Vec2::new(2.0 * ev.radius * SCALE, 2.0 * ev.radius * SCALE)),
-                mesh: meshes.add(create_mesh(100)),
+                mesh: meshes.add(create_mesh(20)),
                 material: materials.add(assets_server.load("icon.png").into()),
                 ..Default::default()
             })
             .insert_bundle(RigidBodyBundle {
                 position: ev.position.into(),
+                ccd: RigidBodyCcd {
+                    ccd_enabled: true,
+                    ..Default::default()
+                },
                 ..Default::default()
             })
             .insert_bundle(ColliderBundle {

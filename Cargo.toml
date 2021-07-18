@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 bevy = "0.5"
+bevy_prototype_lyon = "0.3.1"
 bevy_rapier2d = { version = "0.10", features = ["enhanced-determinism"] }
 nalgebra = "0.27.1"
 rapier2d = { version = "0.9", features = ["enhanced-determinism"] }
