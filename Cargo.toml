@@ -4,11 +4,8 @@ version = "0.1.0"
 edition = "2018"
 publish = false
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies.bevy]
-version = "0.5"
-
-[dependencies.bevy_rapier2d]
-version = "0.10"
-features = ["enhanced-determinism"]
+[dependencies]
+bevy = "0.5"
+bevy_rapier2d = { version = "0.10", features = ["enhanced-determinism"] }
+nalgebra = "0.27.1"
+rapier2d = { version = "0.9", features = ["enhanced-determinism"] }

@@ -7,6 +7,10 @@ use bevy_rapier2d::prelude::*;
 
 pub struct Ball;
 
+pub struct Asleep(bool);
+
+pub struct StartAsleepCheck(Timer);
+
 pub struct SpawnBallEvent {
     pub position: Vec2,
     pub radius: f32,
@@ -16,8 +20,11 @@ pub struct BallPlugin;
 
 impl Plugin for BallPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_event::<SpawnBallEvent>()
-            .add_system(ball_spawner.system());
+        app.insert_resource(Asleep(false))
+            .insert_resource(StartAsleepCheck(Timer::from_seconds(3.0, false)))
+            .add_event::<SpawnBallEvent>()
+            .add_system(ball_spawner.system().label("ball_spawner"))
+            .add_system(check_sleeping.system().after("ball_spawner"));
     }
 }
 
@@ -35,7 +42,7 @@ fn ball_spawner(
             .insert_bundle(SpriteBundle {
                 sprite: Sprite::new(Vec2::new(2.0 * ev.radius * SCALE, 2.0 * ev.radius * SCALE)),
                 mesh: meshes.add(create_mesh(100)),
-                material: materials.add(assets_server.load("goat.png").into()),
+                material: materials.add(assets_server.load("icon.png").into()),
                 ..Default::default()
             })
             .insert_bundle(RigidBodyBundle {
@@ -51,6 +58,29 @@ fn ball_spawner(
                 ..Default::default()
             })
             .insert(RigidBodyPositionSync::Discrete);
+    }
+}
+
+fn check_sleeping(
+    time: Res<Time>,
+    mut timer: ResMut<StartAsleepCheck>,
+    mut all_asleep: ResMut<Asleep>,
+    query: Query<(&RigidBodyActivation, &RigidBodyPosition), With<Ball>>,
+) {
+    if timer.0.tick(time.delta()).finished() && !all_asleep.0 {
+        for (activation, _) in query.iter() {
+            if !activation.sleeping {
+                return;
+            }
+        }
+        all_asleep.0 = true;
+        let mut positions = vec![];
+        for (_, position) in query.iter() {
+            positions.push(position.position.translation);
+        }
+        positions.sort_by_key(|pos| (pos.x * 1000000.0) as i32);
+        println!("{:?}", &positions[..3]);
+        println!("asleep!");
     }
 }
 

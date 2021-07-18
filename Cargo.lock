@@ -212,6 +212,8 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_rapier2d",
+ "nalgebra",
+ "rapier2d",
 ]
 
 [[package]]
