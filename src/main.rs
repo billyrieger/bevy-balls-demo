@@ -81,17 +81,11 @@ fn main() {
 fn setup(
     mut commands: Commands,
     mut rapier_config: ResMut<RapierConfiguration>,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     sim_setup: Res<SimulationSetup>,
 ) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
     rapier_config.scale = SCALE;
     rapier_config.timestep_mode = TimestepMode::FixedTimestep;
-
-    let atlas = TextureAtlas::new_empty(asset_server.load("icon.png"), Vec2::splat(256.0));
-    let atlas_handle = texture_atlases.add(atlas);
-    commands.insert_resource(atlas_handle);
 
     let mut path_builder = PathBuilder::new();
     path_builder.move_to(SCALE * sim_setup.wall_vertices[0]);
