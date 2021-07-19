@@ -1,15 +1,21 @@
-use bevy::utils::HashMap;
-
 use bevy::prelude::*;
+use bevy::utils::HashMap;
 use rapier2d::prelude::*;
 
-/// The initial conditions of the physics simulation.
+pub struct SimulationPlugin;
+
+impl Plugin for SimulationPlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.init_resource::<InitialConditions>()
+            .add_startup_system(run_simulation.system());
+    }
+}
+
+// The initial conditions of the physics simulation.
 pub struct InitialConditions {
-    // Wall-related initial conditions.
     pub wall_vertices: Vec<Point<f32>>,
     pub wall_friction: f32,
     pub wall_resitution: f32,
-    // Ball-related initial conditions.
     pub ball_positions: Vec<Vec2>,
     pub ball_radius: f32,
     pub ball_friction: f32,
@@ -52,8 +58,8 @@ impl Default for InitialConditions {
 
         Self {
             wall_vertices,
-            wall_friction: 1.0,
-            wall_resitution: 0.5,
+            wall_friction: 0.5,
+            wall_resitution: 0.6,
             ball_positions,
             ball_radius,
             ball_friction: 0.9,
@@ -64,7 +70,9 @@ impl Default for InitialConditions {
     }
 }
 
+// The final result of the physics simulation.
 pub struct SimulationResult {
+    // The resting position of each ball.
     pub positions: HashMap<usize, Isometry<f32>>,
 }
 

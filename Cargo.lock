@@ -213,7 +213,6 @@ dependencies = [
  "bevy",
  "bevy_prototype_lyon",
  "bevy_rapier2d",
- "nalgebra",
  "rapier2d",
 ]
 
