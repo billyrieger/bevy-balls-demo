@@ -1,18 +1,25 @@
+use bevy::utils::HashMap;
+
 use bevy::prelude::*;
 use rapier2d::prelude::*;
 
-use crate::WallVertices;
-use crate::HEIGHT;
-use crate::WIDTH;
+use crate::SimulationSetup;
+
+pub struct SimulationResult {
+    pub positions: HashMap<u32, Isometry<f32>>,
+}
 
 fn add_ball(
     rigid_body_set: &mut RigidBodySet,
     collider_set: &mut ColliderSet,
     position: Vec2,
     radius: f32,
+    n: u128,
 ) {
     let rigid_body = RigidBodyBuilder::new_dynamic()
         .translation(position.into())
+        .ccd_enabled(true)
+        .user_data(n)
         .build();
     let collider = ColliderBuilder::ball(radius)
         .restitution(0.9)
@@ -22,37 +29,37 @@ fn add_ball(
     collider_set.insert_with_parent(collider, ball_body_handle, rigid_body_set);
 }
 
-pub(crate) fn run_simulation(wall_vertices: Res<WallVertices>) {
+pub(crate) fn run_simulation(
+    mut commands: Commands,
+    sim_setup: Res<SimulationSetup>,
+) {
     let mut rigid_body_set = RigidBodySet::new();
     let mut collider_set = ColliderSet::new();
 
     collider_set.insert(
         ColliderBuilder::polyline(
-            wall_vertices.0.iter().copied().map(Point::from).collect(),
+            sim_setup
+                .wall_vertices
+                .iter()
+                .copied()
+                .map(Point::from)
+                .collect(),
             None,
         )
         .friction(1.0)
         .build(),
     );
 
-    let ball_center_left = Vec2::new(-0.35 * WIDTH, 0.46 * HEIGHT);
-    let ball_center_right = Vec2::new(0.35 * WIDTH, 0.46 * HEIGHT);
-    for r in -3..=3 {
-        for c in -3..=3 {
-            let offset = Vec2::new(c as f32, r as f32);
-            add_ball(
-                &mut rigid_body_set,
-                &mut collider_set,
-                ball_center_left + offset,
-                0.5,
-            );
-            add_ball(
-                &mut rigid_body_set,
-                &mut collider_set,
-                ball_center_right + offset,
-                0.5,
-            );
-        }
+    let mut n = 0;
+    for &pos in &sim_setup.ball_start_positions {
+        add_ball(
+            &mut rigid_body_set,
+            &mut collider_set,
+            pos,
+            sim_setup.ball_radius,
+            n,
+        );
+        n += 1;
     }
 
     /* Create other structures necessary for the simulation. */
@@ -66,6 +73,8 @@ pub(crate) fn run_simulation(wall_vertices: Res<WallVertices>) {
     let mut ccd_solver = CCDSolver::new();
     let physics_hooks = ();
     let event_handler = ();
+
+    let mut sim_result = SimulationResult { positions: HashMap::default() };
 
     /* Run the game loop, stepping the simulation once per frame. */
     let mut steps = 0;
@@ -86,13 +95,14 @@ pub(crate) fn run_simulation(wall_vertices: Res<WallVertices>) {
         steps += 1;
         if island_manager.active_dynamic_bodies().is_empty() {
             println!("done simulating in {} steps!", steps);
-            let mut translations = vec![];
-            for (_, body) in rigid_body_set.iter() {
-                translations.push(body.translation());
+            for (_, rigid_body) in rigid_body_set.iter() {
+                sim_result
+                    .positions
+                    .insert(rigid_body.user_data as u32, *rigid_body.position());
             }
-            translations.sort_by_key(|pos| (pos.x * 1000000.0) as i32);
-            println!("{:?}", &translations[..3]);
             break;
         }
     }
+
+    commands.insert_resource(sim_result);
 }
