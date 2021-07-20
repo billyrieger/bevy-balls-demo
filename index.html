@@ -1,0 +1,22 @@
+<html>
+
+<head>
+  <title>game</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <script type="module">
+    import init from "./wasm.js";
+    init("./wasm_bg.wasm").then(wasm => {
+      wasm.run();
+    });
+  </script>
+</body>
+
+</html>
